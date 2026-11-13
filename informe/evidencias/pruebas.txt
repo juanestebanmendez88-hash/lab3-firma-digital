@@ -1,0 +1,115 @@
+
+==============================================================================
+  PRUEBAS DEL HASH PROPIO (HashPropio-256)
+==============================================================================
+
+--- Hash 1. Determinismo: el mismo mensaje siempre produce el mismo hash ---
+  "Servicios Multimedia" -> 232a87f86b3592cb178554ecf891a99521ffa181cb3a811f2d1c76cd1526349d
+  "Servicios Multimedia" -> 232a87f86b3592cb178554ecf891a99521ffa181cb3a811f2d1c76cd1526349d
+  "Servicios Multimedia" -> 232a87f86b3592cb178554ecf891a99521ffa181cb3a811f2d1c76cd1526349d
+  [OK]    Las 3 ejecuciones dan el mismo hash
+
+--- Hash 2. Efecto avalancha con un ejemplo ('o' = 01101111 y 'n' = 01101110 difieren en 1 bit) ---
+  "Hola mundo" -> a3edf457e7468172f927baedebba2eb19eb49f99e72e9e2e5ff8b1e9ce52746c
+  "Hola mundn" -> eef08fad4e0fcfa5618ab2ce2c6ac57cbf456779047468249f67c6013aa6a2bf
+  Bits distintos: 138 de 256 (53,9 %)
+
+--- Hash 3. Efecto avalancha: 10.000 mensajes aleatorios, se cambia 1 bit (ideal: 128 de 256 bits = 50 %) ---
+  HashPropio-256  promedio 127,98 bits cambiados (49,99 %)   mínimo 99   máximo 157
+  SHA-256         promedio 128,10 bits cambiados (50,04 %)   mínimo 98   máximo 154
+
+--- Hash 4. Distribución de bits en 10.000 hashes (cada posición debería valer 1 la mitad de las veces) ---
+  Proporción global de unos: 49,98 %   posición más baja: 48,62 %   posición más alta: 51,64 %
+  [OK]    Todas las posiciones entre 47 % y 53 %
+
+--- Hash 5. Búsqueda de colisiones en 200.000 mensajes parecidos ("mensaje 0", "mensaje 1", ...) ---
+  Colisiones encontradas: 0   (tiempo: 347 ms)
+  [OK]    Ninguna colisión
+
+--- Hash 6. Compresión: mensajes de cualquier tamaño producen 256 bits ---
+  Mensaje de         0 bytes -> 256 bits: 65efd94d15a17427a6032cc1... (32 bytes)
+  Mensaje de         1 bytes -> 256 bits: 8dbb52a13857a134cb211121... (32 bytes)
+  Mensaje de       100 bytes -> 256 bits: cfba22ea8cd319da49fba448... (32 bytes)
+  Mensaje de 1.000.000 bytes -> 256 bits: 8284293de182041d79bc8095... (32 bytes)
+  Como infinitos mensajes caen en 2^256 resultados posibles, se pierde información: no hay forma de reconstruir el mensaje.
+
+==============================================================================
+  PRUEBAS DEL CIFRADO PROPIO (CifradoPropio)
+==============================================================================
+
+--- Cifrado 0. Diccionario de login.js dentro del algoritmo ---
+  a) Preparación de la llave privada con encrypt() de login.js:
+     "gato" -> g=mucho, a=vida, t=penguin, o=de -> "muchovidapenguinde"
+     K = HashPropio("muchovidapenguinde") = 70d3e9aa30c7492e7b6ac0f2bdf478b549ab422f8593fb50c683467a4172db13
+  b) Cada dígito hexadecimal se escribe con su palabra para enviarlo:
+     70d3e9aa... (32 bytes) -> pinguino-uwu-encanta-bachata-xd2-elbicho-vida-vida-bachata-uwu-tmb-pin... (447 caracteres)
+  [OK]    De las palabras se recuperan exactamente los mismos bytes
+  Observación: el diccionario de login.js repite palabras (y/j = "es", p/k = "la", i/l = "mejor", g/b = "mucho").
+     "ya" -> "esvida"   y   "ja" -> "esvida": dan la misma llave.
+     Por eso login.js no sirve como cifrado reversible, pero sí para preparar la llave, que de todas formas pasa por un hash.
+
+--- Cifrado 1. Ejemplo paso a paso: cifrar "Hola" con la palabra clave "gato" ---
+  Llave pública K = HashPropio(Traducir("gato")) = 70d3e9aa30c7492e7b6ac0f2bdf478b549ab422f8593fb50c683467a4172db13
+  Valores iniciales: a[-1] = K[31] = 19   c[4] = K[0] = 112
+
+  PASO 1, ida: a[i] = ROTL3((m[i] XOR K[i]) + a[i-1])  (mod 256)
+   i | letra | m[i] | K[i] | m XOR K | + a[i-1] | suma | ROTL3 = a[i]
+   0 |   H   |   72 |  112 |      56 |       19 |   75 |           90
+   1 |   o   |  111 |  211 |     188 |       90 |   22 |          176
+   2 |   l   |  108 |  233 |     133 |      176 |   53 |          169
+   3 |   a   |   97 |  170 |     203 |      169 |  116 |          163
+
+  PASO 1, vuelta (de atrás hacia adelante): c[i] = ROTL3(a[i] + c[i+1])  (mod 256)
+   i | a[i] | + c[i+1] | suma | ROTL3 = c[i]
+   3 |  163 |      112 |   19 |          152
+   2 |  169 |      152 |   65 |           10
+   1 |  176 |       10 |  186 |          213
+   0 |   90 |      213 |   47 |          121
+
+  PASO 2: el byte i se mueve a la posición (i * 3 + 3) mod 4
+   c[0] = 121 -> posición 3
+   c[1] = 213 -> posición 2
+   c[2] =  10 -> posición 1
+   c[3] = 152 -> posición 0
+
+  Resultado cifrado: [152, 10, 213, 121]
+  Descifrado con K : [72, 111, 108, 97] = "Hola"
+  [OK]    El descifrado devuelve el mensaje original
+
+--- Cifrado 2. Reversibilidad: 10.000 mensajes y claves aleatorias ---
+  Descifrados correctamente: 10.000 de 10.000
+  [OK]    Descifrar(Cifrar(m)) = m en todos los casos
+
+--- Cifrado 3. Con una llave pública que no corresponde no se recupera el mensaje ---
+  Hash original              : a3edf457e7468172f927baedebba2eb19eb49f99e72e9e2e5ff8b1e9ce52746c
+  Firmado con "gato"         : dd50e5f5a669c62966392f69a0cc86aecd4a06be662660e2b993b1c880c4e741
+  Descifrado con K de "perro": f750fa42479655a0185931bf3e445d40fe74172436561be3a887213a9a5adb7f
+  [OK]    El resultado no coincide con el hash original
+
+--- Cifrado 4. Sensibilidad a la clave: "gato" vs "gatp" (una letra de diferencia) ---
+  K("gato") = 70d3e9aa30c7492e7b6ac0f2bdf478b549ab422f8593fb50c683467a4172db13
+  K("gatp") = 53ba52ce60adf7cce3a3042b09a790534a4cf3b84d0466e708c13ce39dd7dfef
+  Bits distintos entre las llaves públicas: 132 de 256
+  Bits distintos entre las firmas         : 137 de 256
+  La llave pública es el hash de la palabra clave traducida: no se parece a ella y no permite recuperarla.
+
+--- Cifrado 5. Difusión: 10.000 bloques de 32 bytes, se cambia 1 bit del mensaje ---
+  Promedio de bits cambiados en el cifrado: 126,79 de 256 (49,53 %)
+  La ida lleva el cambio a los bytes siguientes, la vuelta a los anteriores y la rotación lo mezcla entre bits.
+  [OK]    Difusión entre 45 % y 55 % (ideal: 50 %)
+
+--- Cifrado 6. Justificación del paso 1: difusión de cada variante (10.000 bloques, 1 bit cambiado) ---
+  Solo ida, sin rotación (diseño inicial)     28,59 de 256 bits (11,17 %)
+  Ida y vuelta, sin rotación                  67,44 de 256 bits (26,34 %)
+  Ida y vuelta con rotación (CifradoPropio)  126,79 de 256 bits (49,53 %)
+  Con solo sumas, la diferencia viaja como el mismo desplazamiento de byte en byte; la rotación la mezcla.
+
+==============================================================================
+  PRUEBA DEL ADAPTADOR RSA
+==============================================================================
+
+--- Descifrar la firma con la llave pública (BigInteger) vs RSA.VerifyHash de la librería ---
+  Hash SHA-256 original         : ca8f60b2cc7f05837d98b208b57fb6481553fc5f1219d59618fd025002a66f5c
+  Hash recuperado de la firma   : ca8f60b2cc7f05837d98b208b57fb6481553fc5f1219d59618fd025002a66f5c
+  [OK]    RSA.VerifyHash (librería) acepta la firma
+  [OK]    El hash recuperado manualmente es igual al original
