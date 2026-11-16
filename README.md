@@ -3,9 +3,7 @@
 Servicios Multimedia, Facultad de Ingeniería, Universidad de San Buenaventura, Bogotá.
 Profesor: Ing. Sergio Alberto Reyes Gómez.
 
-**Integrantes:** Juan Mendez, Natalia Noguera y Karen Kemba.
-
-**Informe IEEE:** [`informe/informe.pdf`](informe/informe.pdf) (fuente LaTeX en [`informe/informe.tex`](informe/informe.tex)).
+**Integrantes:** Juan Mendez, Natalia Noguera y Karen quemba.
 
 Aplicación de consola en C# (.NET 10) que implementa el proceso completo de **firma digital**:
 escribir un mensaje, hashearlo, cifrar el hash con una llave privada y enviarlo por **TCP** junto con
@@ -126,17 +124,14 @@ classDiagram
 
 ### HashPropio-256 (2 pasos)
 
-Estado: 8 números de 32 bits que empiezan con constantes fijas (parte fraccionaria de √p·π para los primos 2…19).
+Estado:esta compuesto por 8 palabras de 32 bits que se inicializan con constantes fijas, calculadas a partir de la parte decimal de √p·π para los numeros primos del 2 al 19.
 
-1. **Absorción**: cada byte del mensaje entra al estado:
+1. **Absorción**: cada byte del mensaje se incorpora al estado mediante la operacion:
    `h[j] = (h[j] XOR byte) × 0x01000193` y luego `h[j+1] += RotarIzq(h[j], 5)` (con `j = i mod 8`).
-   Al final se mezcla también la longitud del mensaje.
-2. **Mezcla final**: se guarda una copia del estado, se dan 4 vueltas combinando cada número con dos
-   vecinos (suma, XOR, rotación, multiplicación, desplazamiento) y al final **se suma la copia**.
+   Al terminar tambien se combina la longitud del mensaje.
+2. **Mezcla final**:se conserva una copia del estado inicial y se realizan 4 rondas de operaciones que combinan cada palabra con dos posiciones vecinas mediante sumas, XOR, rotaciones, multiplicaciones y desplazamientos. finalmente **se suma la copia guardada**.
 
-¿Por qué es irreversible? Mensajes de cualquier tamaño quedan en 256 bits (se pierde información), las
-multiplicaciones y XOR mezclan bits de forma no lineal, y la suma final con la copia no se puede deshacer
-sin conocer el estado anterior, que es justo lo que se busca.
+¿Por qué es irreversible? porque los mensajes, sin importar su tamaño, se convierten en un resultado de 256 bits, lo que implica perdida de informacion. ademas, las multiplicaciones y operaciones XOR mezclan los bits, mientras que la suma con la copia dificulta recuperar el estado anterior.
 
 ### CifradoPropio (2 pasos) + diccionario de `login.js`
 
@@ -151,19 +146,16 @@ sumas mod 256):
    - ida: `a[i] = ROTL3((m[i] XOR K[i]) + a[i-1])`, con `a[-1] = K[31]`;
    - vuelta (de atrás hacia adelante): `c[i] = ROTL3(a[i] + c[i+1])`, con `c[L] = K[0]`.
 
-   El XOR esconde cada byte con la llave. La suma con el vecino encadena los bytes: en la ida un cambio
-   arrastra a los bytes siguientes y en la vuelta a los anteriores, así que alcanza a todos. La rotación
-   mezcla los bits altos con los bajos para que la diferencia no viaje igual de un byte a otro.
-2. **Transposición por saltos:** el byte `i` pasa a la posición `(i × salto + inicio) mod L`. `salto` e
+   la operacion XOR oculta cada byte utilizando la llave. las sumas con los bytes vecinos permiten encadenar los valores: durante la ida, un cambio afecta los bytes siguientes y, durante la vuelta, y tambien alcanza los anteriores. la rotacion ayuda a distribuir las diferencias entre los bits de cada byte
+   
+3. **Transposición por saltos:** el byte `i` pasa a la posición `(i × salto + inicio) mod L`. `salto` e
    `inicio` salen de la llave; `salto` no comparte divisores con `L`, así cada byte cae en una posición distinta.
 
 **Descifrar** con K: los pasos al revés (`ROTR3` = rotar a la derecha): devolver cada byte a su posición,
 deshacer la vuelta con `a[i] = ROTR3(c[i]) - c[i+1]` y deshacer la ida con
 `m[i] = (ROTR3(a[i]) - a[i-1]) XOR K[i]`.
 
-¿Por qué ida, vuelta y rotación? La prueba "Cifrado 6" mide las variantes con los mismos datos: con solo la
-ida (diseño inicial), cambiar 1 bit altera en promedio el 11,17 % de la firma; con ida y vuelta sin rotación,
-el 26,34 %; con las tres operaciones, el 49,53 % (el ideal es 50 %).
+¿Por qué ida, vuelta y rotación? La prueba "Cifrado 6" compara las diferentes variantes utilizando los mismos datos. con unicamente la ida, correspondiente al diseño inicial, modificar un bit cambia en promedio el 11,17% de la firma. al utilizar ida y vuelta sin rotacion, el resultado aumenta al 26,34%. finalmente, al incluir las tres operaciones se alcanza un 49,53%, cercano al 50% ideal.
 
 **Envío con las palabras de `login.js`:** la firma y la llave pública se escriben en hexadecimal y cada dígito
 se cambia por su palabra del diccionario (`0`→`uwu`, `1`→`amigues`, `2`→`pongan`, `3`→`bachata`,
