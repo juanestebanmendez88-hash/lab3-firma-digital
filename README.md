@@ -3,7 +3,7 @@
 Servicios Multimedia, Facultad de Ingeniería, Universidad de San Buenaventura, Bogotá.
 Profesor: Ing. Sergio Alberto Reyes Gómez.
 
-**Integrantes:** Juan Mendez, Natalia Noguera y Karen quemba.
+**Integrantes:** Juan Mendez, Natalia Noguera y Karen Quemba.
 
 Aplicación de consola en C# (.NET 10) que implementa el proceso completo de **firma digital**:
 escribir un mensaje, hashearlo, cifrar el hash con una llave privada y enviarlo por **TCP** junto con
